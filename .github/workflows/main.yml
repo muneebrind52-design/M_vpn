@@ -26,11 +26,31 @@ jobs:
 
       - name: Locate Project Root & Build APK
         run: |
-          PUBSPEC_DIR=$(find . -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
-          echo "Found pubspec.yaml in: $PUBSPEC_DIR"
-          cd "$PUBSPEC_DIR"
+          flutter config --no-analytics
+
+          # Unzip if user uploaded zip file directly
+          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Unzipping package: $ZIP_FILE"
+            unzip -o "$ZIP_FILE"
+          fi
+
+          # Find pubspec.yaml directory
+          PUBSPEC_PATH=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
+
+          if [ -z "$PUBSPEC_PATH" ]; then
+            echo "Error: pubspec.yaml not found!"
+            ls -la
+            exit 1
+          fi
+
+          TARGET_DIR=$(dirname "$PUBSPEC_PATH")
+          echo "Building project in: $TARGET_DIR"
+          cd "$TARGET_DIR"
+
           flutter pub get
           flutter build apk --release
+
           mkdir -p $GITHUB_WORKSPACE/output_apk
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output_apk/muneeb_vpn_release.apk
 
