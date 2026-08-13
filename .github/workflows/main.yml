@@ -2,29 +2,40 @@ name: Build Muneeb VPN APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.24.0'
+      - name: Setup Java JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-    - name: Install Dependencies
-      run: flutter pub get
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
 
-    - name: Build APK
-      run: flutter build apk --release
+      - name: Locate Project Root & Build APK
+        run: |
+          PUBSPEC_DIR=$(find . -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
+          echo "Found pubspec.yaml in: $PUBSPEC_DIR"
+          cd "$PUBSPEC_DIR"
+          flutter pub get
+          flutter build apk --release
+          mkdir -p $GITHUB_WORKSPACE/output_apk
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output_apk/muneeb_vpn_release.apk
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: Muneeb_VPN_APK
-        path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Upload APK Artifact (Direct Download Link)
+        uses: actions/upload-artifact@v3
+        with:
+          name: Muneeb_VPN_Release_APK
+          path: output_apk/muneeb_vpn_release.apk
